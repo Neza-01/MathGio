@@ -1,7 +1,7 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'subtitleH2' | 'link';
   textColor?: 'black' | 'white'; // 👈 nuevo prop
 };
 
@@ -20,6 +20,7 @@ export function ThemedText({
         type === 'title' ? styles.title : undefined,
         type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
         type === 'subtitle' ? styles.subtitle : undefined,
+        type === 'subtitleH2' ? styles.subtitleH2 : undefined,
         type === 'link' ? styles.link : undefined,
         style,
       ]}
@@ -30,13 +31,14 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
-    fontSize: 16,
+    fontSize: 14,
     lineHeight: 24,
   },
   defaultSemiBold: {
-    fontSize: 16,
+    fontSize: 20,
     lineHeight: 24,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    marginBlock: 5
   },
   title: {
     fontSize: 32,
@@ -46,6 +48,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  subtitleH2: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 20
   },
   link: {
     lineHeight: 30,
