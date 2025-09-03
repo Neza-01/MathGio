@@ -1,9 +1,8 @@
-import { Image, StyleSheet, View, ScrollView, Text, ImageBackground, Linking, TextInput, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { useEffect, useState } from 'react';
-import axios from "axios";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from 'react';
+import { Image, ImageBackground, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type Video = {
   id: string;
@@ -50,75 +49,40 @@ const temasDestacados: Topics[] = [
 
 export default function HomeScreen() {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
-  const CHANNEL_ID = process.env.EXPO_PUBLIC_CHANNEL_ID;
 
   const [text, setText] = useState('');
 
-  function formatDuration(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-
-    const mm = String(m).padStart(2, "0");
-    const ss = String(s).padStart(2, "0");
-
-    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
-  }
-
-  function parseISODuration(iso: string): number {
-    const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-
-    const hours = parseInt(match?.[1] || "0", 10);
-    const minutes = parseInt(match?.[2] || "0", 10);
-    const seconds = parseInt(match?.[3] || "0", 10);
-
-    return hours * 3600 + minutes * 60 + seconds;
-  }
-
-  function formatISODuration(iso: string): string {
-    const totalSeconds = parseISODuration(iso);
-    return formatDuration(totalSeconds);
-  }
-
   useEffect(() => {
-    if (!CHANNEL_ID) {
-      console.warn("⚠️ Channel ID no definido");
-      return;
-    }
-    const fetchVideos = async () => {
-      try {
-        const playlistId = `UU${CHANNEL_ID.substring(2)}`;
+  const fetchVideos = async () => {
+    try {
+      const response = await fetch("https://math-gio-backend.onrender.com/videos/latest?n=5", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": API_KEY?.trim() || ""
+        }
+      });
 
-        const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=10&playlistId=${playlistId}&key=${API_KEY}`;
-        const response = await axios.get(playlistUrl);
-
-        const videoIds = response.data.items.map((item: any) => item.contentDetails.videoId).join(",");
-
-        const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?key=${API_KEY}&id=${videoIds}&part=contentDetails,snippet`;
-        const detailsResponse = await axios.get(detailsUrl);
-
-        const items = detailsResponse.data.items
-          .filter((item: any) => {
-            const duration = item.contentDetails.duration;
-            const totalSeconds = parseISODuration(duration);
-            return totalSeconds >= 60;
-          })
-          .map((item: any) => ({
-            id: item.id,
-            title: item.snippet.title,
-            thumbnail: item.snippet.thumbnails.medium.url,
-            duration: formatISODuration(item.contentDetails.duration),
-            url: `https://www.youtube.com/watch?v=${item.id}`,
-          }));
-        setVideos(items);
-      } catch (error) {
-        console.error("Error al cargar videos:", error);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
-    };
-    //fetchVideos();
-  }, []);
+
+      const data = await response.json();
+      setVideos(data);
+    } catch (error) {
+      console.error("Error al obtener videos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchVideos();
+}, []);
+
 
   return (
     <ScrollView
