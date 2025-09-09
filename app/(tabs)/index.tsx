@@ -4,6 +4,7 @@ import axios from 'axios';
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from 'react';
 import { Image, ImageBackground, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import retos from '../../assets/public/Retos';
 
 type Video = {
   id: string;
@@ -19,14 +20,34 @@ type Topics = {
   description: string
 };
 
+type Reto = {
+  id: number;
+  titulo: string;
+  descripcion: string
+}
+
 export default function HomeScreen() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [temasDestacados, SetTemas] = useState<Topics[]>([]);
   const [searchResults, setSearchResults] = useState<Topics[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [reto, setReto] = useState<Reto>({
+    "id": 0,
+    "titulo": "Hola",
+    "descripcion": ""
+  });
 
   const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
   const [text, setText] = useState('');
+
+  async function setRetoDiario(){
+    const randomIndex = await Math.floor(Math.random() * retos.length);
+    setReto(retos[randomIndex]);
+  }
+
+  useEffect(()=>{
+    setRetoDiario();
+  }, [])
 
   useEffect(() => {
     async function getVideos() {
@@ -155,6 +176,15 @@ export default function HomeScreen() {
           </View>
         ))}
       </ScrollView>
+
+      {/* RETO DEL DIA */}
+      <ThemedText type="subtitleH2" textColor="black">Reto Del Dia</ThemedText>
+      <View>
+        <ThemedText type="default" textColor="black">{reto.titulo}</ThemedText>
+        <ThemedText>{reto.descripcion}</ThemedText>
+      </View>
+      
+
     </ScrollView>
   );
 }
