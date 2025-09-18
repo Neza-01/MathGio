@@ -40,12 +40,12 @@ export default function HomeScreen() {
   const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
   const [text, setText] = useState('');
 
-  async function setRetoDiario(){
+  async function setRetoDiario() {
     const randomIndex = await Math.floor(Math.random() * retos.length);
     setReto(retos[randomIndex]);
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     setRetoDiario();
   }, [])
 
@@ -65,7 +65,13 @@ export default function HomeScreen() {
         const response = await axios.get("https://math-gio-backend.onrender.com/temas/simple", {
           headers: { "x-api-key": API_KEY }
         });
-        SetTemas(response.data);
+
+        const temasConId = response.data.map((tema: any, index: number) => ({
+          ...tema,
+          id: index.toString(),
+        }));
+
+        SetTemas(temasConId);
       } catch (err) {
         console.error(`No se pudo obtener la información: ${err}`);
       }
@@ -164,8 +170,8 @@ export default function HomeScreen() {
       {/* TEMAS DESTACADOS */}
       <ThemedText type="subtitleH2" textColor="black">Temas Destacados</ThemedText>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-        {temasDestacados.map((tema) => (
-          <View>
+        {temasDestacados.map((tema: Topics) => (
+          <View key={tema.id}>
             <View style={styles.topicCard}>
               <ThemedText type='defaultSemiBold' textColor='white'>{tema.title}</ThemedText>
               <ThemedText type='default' textColor='white'>{tema.description}</ThemedText>
@@ -183,7 +189,7 @@ export default function HomeScreen() {
         <ThemedText type="default" textColor="black">{reto.titulo}</ThemedText>
         <ThemedText>{reto.descripcion}</ThemedText>
       </View>
-      
+
 
     </ScrollView>
   );
