@@ -3,7 +3,18 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from 'react';
-import { Image, ImageBackground, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  ImageBackground,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import retos from '../../assets/public/Retos';
 
 type Video = {
@@ -11,71 +22,72 @@ type Video = {
   title: string;
   thumbnail: string;
   duration: string;
-  url: string
+  url: string;
 };
 
 type Topics = {
   id: number;
   title: string;
-  description: string
+  description: string;
 };
 
 type Reto = {
   id: number;
   titulo: string;
-  descripcion: string
-}
+  descripcion: string;
+};
 
 export default function HomeScreen() {
   const [videos, setVideos] = useState<Video[]>([]);
-  const [temasDestacados, SetTemas] = useState<Topics[]>([]);
+  const [temasDestacados, setTemas] = useState<Topics[]>([]);
   const [searchResults, setSearchResults] = useState<Topics[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [reto, setReto] = useState<Reto>({
-    "id": 0,
-    "titulo": "Hola",
-    "descripcion": ""
-  });
+  const [reto, setReto] = useState<Reto>({ id: 0, titulo: 'Hola', descripcion: '' });
 
-  const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
+  const API_KEY: string = process.env.EXPO_PUBLIC_API_KEY ?? '';
   const [text, setText] = useState('');
 
-  async function setRetoDiario() {
-    const randomIndex = await Math.floor(Math.random() * retos.length);
+  const [loadingVideos, setLoadingVideos] = useState<boolean>(true);
+  const [loadingTemas, setLoadingTemas] = useState<boolean>(true);
+
+  function setRetoDiario() {
+    const randomIndex = Math.floor(Math.random() * retos.length);
     setReto(retos[randomIndex]);
   }
 
   useEffect(() => {
     setRetoDiario();
-  }, [])
+  }, []);
 
   useEffect(() => {
     async function getVideos() {
       try {
+        setLoadingVideos(true);
         const response = await axios.get("https://math-gio-backend.onrender.com/videos/latest?n=10", {
           headers: { "x-api-key": API_KEY }
         });
         setVideos(response.data);
       } catch (err) {
         console.error(`No se pudo obtener la información: ${err}`);
+      } finally {
+        setLoadingVideos(false);
       }
     }
+
     async function getTemas() {
       try {
+        setLoadingTemas(true);
         const response = await axios.get("https://math-gio-backend.onrender.com/temas/simple", {
           headers: { "x-api-key": API_KEY }
         });
-
-        const temasConId = response.data.map((tema: any, index: number) => ({
-          ...tema,
-          id: index.toString(),
-        }));
-
-        SetTemas(temasConId);
+        setTemas(response.data);
       } catch (err) {
         console.error(`No se pudo obtener la información: ${err}`);
+      } finally {
+        setLoadingTemas(false);
       }
     }
+
     getVideos();
     getTemas();
   }, []);
@@ -94,6 +106,15 @@ export default function HomeScreen() {
     }
   }
 
+  if (loadingVideos && loadingTemas) {
+    return (
+      <View style={styles.fullscreenLoader}>
+        <ActivityIndicator size="large" />
+        <ThemedText type="default" textColor="black">Cargando contenido…</ThemedText>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* HEADER */}
@@ -102,7 +123,6 @@ export default function HomeScreen() {
         <Image source={require('../../assets/images/Profile.jpg')} style={styles.image} />
       </View>
 
-      {/* INPUT */}
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
           <View style={styles.iconContainer}>
@@ -124,7 +144,6 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* DESPLEGABLE DE RESULTADOS */}
         {searchResults.length > 0 && (
           <View style={styles.dropdown}>
             <ScrollView nestedScrollEnabled={true}>
@@ -133,15 +152,12 @@ export default function HomeScreen() {
                   key={tema.id}
                   style={styles.resultItem}
                   onPress={() => {
-                    setSearchResults([]); // Cierra el desplegable al elegir
-                    Linking.openURL("https://youtube.com"); // 👈 cambia por URL real
+                    setSearchResults([]);
+                    Linking.openURL("https://youtube.com");
                   }}
                 >
                   <ThemedText type="defaultSemiBold" textColor="black">
                     {tema.title}
-                  </ThemedText>
-                  <ThemedText type="default" textColor="black">
-                    {tema.description}
                   </ThemedText>
                 </TouchableOpacity>
               ))}
@@ -150,47 +166,53 @@ export default function HomeScreen() {
         )}
       </View>
 
-
-      {/* VIDEOS */}
       <ThemedText type="subtitleH2" textColor="black">Últimos videos</ThemedText>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-        {videos.map((video) => (
-          <TouchableOpacity key={video.id} onPress={() => Linking.openURL(video.url)} activeOpacity={0.8}>
-            <ImageBackground source={{ uri: video.thumbnail }} style={styles.thumbnail} imageStyle={{ borderRadius: 12 }}>
-              <LinearGradient colors={["rgba(0, 0, 0, 0.55)", "rgba(0, 0, 0, 0)"]} style={styles.gradient} />
-              <Text style={styles.title} numberOfLines={2}>{video.title}</Text>
-              <View style={styles.subTitleBox}>
-                <Text style={styles.subTitle} numberOfLines={2}>{video.duration}</Text>
-              </View>
-            </ImageBackground>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {loadingVideos ? (
+        <View style={styles.sectionLoader}>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+          {videos.map((video) => (
+            <TouchableOpacity key={video.id} onPress={() => Linking.openURL(video.url)} activeOpacity={0.8}>
+              <ImageBackground source={{ uri: video.thumbnail }} style={styles.thumbnail} imageStyle={{ borderRadius: 12 }}>
+                <LinearGradient colors={["rgba(0, 0, 0, 0.55)", "rgba(0, 0, 0, 0)"]} style={styles.gradient} />
+                <Text style={styles.title} numberOfLines={2}>{video.title}</Text>
+                <View style={styles.subTitleBox}>
+                  <Text style={styles.subTitle} numberOfLines={2}>{video.duration}</Text>
+                </View>
+              </ImageBackground>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
-      {/* TEMAS DESTACADOS */}
       <ThemedText type="subtitleH2" textColor="black">Temas Destacados</ThemedText>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-        {temasDestacados.map((tema: Topics) => (
-          <View key={tema.id}>
-            <View style={styles.topicCard}>
-              <ThemedText type='defaultSemiBold' textColor='white'>{tema.title}</ThemedText>
-              <ThemedText type='default' textColor='white'>{tema.description}</ThemedText>
-              <TouchableOpacity style={styles.arrowButton}>
-                <Ionicons name="arrow-forward" size={25} color="#1b1b1b" />
-              </TouchableOpacity>
+      {loadingTemas ? (
+        <View style={styles.sectionLoader}>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+          {temasDestacados.map((tema: Topics) => (
+            <View key={tema.id}>
+              <View style={styles.topicCard}>
+                <ThemedText type='defaultSemiBold' textColor='white'>{tema.title}</ThemedText>
+                <ThemedText type='default' textColor='white'>{tema.description}</ThemedText>
+                <TouchableOpacity style={styles.arrowButton}>
+                  <Ionicons name="arrow-forward" size={25} color="#1b1b1b" />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      )}
 
-      {/* RETO DEL DIA */}
       <ThemedText type="subtitleH2" textColor="black">Reto Del Dia</ThemedText>
       <View>
         <ThemedText type="default" textColor="black">{reto.titulo}</ThemedText>
         <ThemedText>{reto.descripcion}</ThemedText>
       </View>
-
-
     </ScrollView>
   );
 }
@@ -199,7 +221,21 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   contentContainer: { paddingBottom: 40 },
 
-  /* HEADER */
+  fullscreenLoader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 24,
+    backgroundColor: '#FFFFFF'
+  },
+
+  sectionLoader: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
   topContainer: {
     backgroundColor: "#1d1d1d",
     flexDirection: "row",
@@ -212,7 +248,6 @@ const styles = StyleSheet.create({
   },
   image: { width: 70, height: 70, borderRadius: 100 },
 
-  /* INPUT */
   inputContainer: {
     marginTop: -38,
     width: "100%",
@@ -242,12 +277,12 @@ const styles = StyleSheet.create({
 
   dropdown: {
     position: "absolute",
-    top: 55, // justo debajo del input
+    top: 55,
     left: 20,
     right: 20,
     backgroundColor: "#fff",
     borderRadius: 10,
-    maxHeight: 200, // 👈 altura máxima scrollable
+    maxHeight: 200,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -260,6 +295,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#ddd"
   },
+
   /* SCROLL */
   horizontalScroll: {
     paddingVertical: 10,
