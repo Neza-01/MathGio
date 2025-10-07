@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ImageBackground, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -28,10 +29,13 @@ export default function TabTwoScreen() {
   const [loadingVideosByTopic, setLoadingVideosByTopic] = useState<Record<number, boolean>>({});
   const [errorSearch, setErrorSearch] = useState<string | null>(null);
   const [errorVideosByTopic, setErrorVideosByTopic] = useState<Record<number, string | null>>({});
+  const router = useRouter();
+
 
   const API_KEY: string = process.env.EXPO_PUBLIC_API_KEY ?? '';
 
   const doSearch = async (value: string) => {
+    
     if (!value || value.trim().length <= 1) {
       setTopics([]);
       setErrorSearch(null);
@@ -191,7 +195,7 @@ export default function TabTwoScreen() {
                   style={styles.topicHeader}
                 >
                   <View style={{ flex: 1 }}>
-                    <ThemedText type="defaultSemiBold" textColor="white">{topic.title}</ThemedText>
+                    <ThemedText type="defaultSemiBold" textColor="white" onPress={() => router.push({ pathname: '/topic/[id]/topic', params: { id: String(topic.id) } })}>{topic.title}</ThemedText>
                     {!!topic.description && (
                       <ThemedText type="default" textColor="white" numberOfLines={2}>
                         {topic.description}

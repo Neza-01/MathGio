@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -35,13 +36,20 @@ type Reto = {
   id: number;
   titulo: string;
   descripcion: string;
+  ejercicio?: string;
+  url?: string;
 };
+
 
 export default function HomeScreen() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [temasDestacados, setTemas] = useState<Topics[]>([]);
   const [searchResults, setSearchResults] = useState<Topics[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const ADMIN_CODE = process.env.EXPO_PUBLIC_ADMIN_CODE ?? '';
+  const router = useRouter();
+
+  // Reto del día (selección determinista no secuencial)
   const [reto, setReto] = useState<Reto>({ id: 0, titulo: 'Hola', descripcion: '' });
 
   const API_KEY: string = process.env.EXPO_PUBLIC_API_KEY ?? '';
@@ -50,9 +58,25 @@ export default function HomeScreen() {
   const [loadingVideos, setLoadingVideos] = useState<boolean>(true);
   const [loadingTemas, setLoadingTemas] = useState<boolean>(true);
 
+  // ---- Selección diaria no secuencial (día*índice + sal y xorshift) ----
+  const pickDailyIndex = (len: number, date: Date = new Date()): number => {
+    if (len <= 0) return -1;
+    const y = date.getUTCFullYear();
+    const m = date.getUTCMonth() + 1;
+    const d = date.getUTCDate();
+
+    let seed = ((d * 73856093) ^ (m * 19349663) ^ (y * 83492791)) >>> 0;
+
+    seed ^= seed << 13; seed >>>= 0;
+    seed ^= seed >> 17; seed >>>= 0;
+    seed ^= seed << 5; seed >>>= 0;
+
+    return seed % len;
+  };
+
   function setRetoDiario() {
-    const randomIndex = Math.floor(Math.random() * retos.length);
-    setReto(retos[randomIndex]);
+    const idx = pickDailyIndex(retos.length);
+    if (idx >= 0) setReto(retos[idx] as Reto);
   }
 
   useEffect(() => {
@@ -63,9 +87,10 @@ export default function HomeScreen() {
     async function getVideos() {
       try {
         setLoadingVideos(true);
-        const response = await axios.get("https://math-gio-backend.onrender.com/videos/latest?n=10", {
-          headers: { "x-api-key": API_KEY }
-        });
+        const response = await axios.get(
+          "https://math-gio-backend.onrender.com/videos/latest?n=10",
+          { headers: { "x-api-key": API_KEY } }
+        );
         setVideos(response.data);
       } catch (err) {
         console.error(`No se pudo obtener la información: ${err}`);
@@ -77,9 +102,10 @@ export default function HomeScreen() {
     async function getTemas() {
       try {
         setLoadingTemas(true);
-        const response = await axios.get("https://math-gio-backend.onrender.com/temas/simple", {
-          headers: { "x-api-key": API_KEY }
-        });
+        const response = await axios.get(
+          "https://math-gio-backend.onrender.com/temas/simple",
+          { headers: { "x-api-key": API_KEY } }
+        );
         setTemas(response.data);
       } catch (err) {
         console.error(`No se pudo obtener la información: ${err}`);
@@ -134,10 +160,19 @@ export default function HomeScreen() {
             value={text}
             onChangeText={(nuevoTexto: string) => {
               setText(nuevoTexto);
+
+              const normalized = nuevoTexto.trim();
+              if (ADMIN_CODE && normalized === ADMIN_CODE) {
+                setSearchResults([]);
+                setIsModalVisible(false);
+                router.push('/admin');
+                return;
+              }
               if (nuevoTexto.length > 1) {
                 search(nuevoTexto);
               } else {
                 setSearchResults([]);
+                setIsModalVisible(false);
               }
             }}
             placeholderTextColor="gray"
@@ -151,10 +186,7 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={tema.id}
                   style={styles.resultItem}
-                  onPress={() => {
-                    setSearchResults([]);
-                    Linking.openURL("https://youtube.com");
-                  }}
+                  onPress={() => router.push({ pathname: '/topic/[id]/topic', params: { id: String(tema.id) } })}
                 >
                   <ThemedText type="defaultSemiBold" textColor="black">
                     {tema.title}
@@ -199,7 +231,8 @@ export default function HomeScreen() {
               <View style={styles.topicCard}>
                 <ThemedText type='defaultSemiBold' textColor='white'>{tema.title}</ThemedText>
                 <ThemedText type='default' textColor='white'>{tema.description}</ThemedText>
-                <TouchableOpacity style={styles.arrowButton}>
+                <TouchableOpacity style={styles.arrowButton}
+                  onPress={() => router.push({ pathname: '/topic/[id]/topic', params: { id: String(tema.id) } })}>
                   <Ionicons name="arrow-forward" size={25} color="#1b1b1b" />
                 </TouchableOpacity>
               </View>
@@ -209,9 +242,37 @@ export default function HomeScreen() {
       )}
 
       <ThemedText type="subtitleH2" textColor="black">Reto Del Dia</ThemedText>
-      <View>
-        <ThemedText type="default" textColor="black">{reto.titulo}</ThemedText>
-        <ThemedText>{reto.descripcion}</ThemedText>
+      <View style={{ paddingHorizontal: 20, marginTop: 6 }}>
+        <View style={styles.challengeCard}>
+          {/* Cabecera oscura */}
+          <View style={styles.challengeHeader}>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="defaultSemiBold" textColor="white">
+                {reto.titulo}
+              </ThemedText>
+              {!!reto.descripcion && (
+                <ThemedText type="default" textColor="white" numberOfLines={2}>
+                  {reto.descripcion}
+                </ThemedText>
+              )}
+            </View>
+            <Ionicons name="trophy" size={22} color="#FFFFFF" />
+          </View>
+
+          {/* Cuerpo blanco */}
+          <View style={styles.challengeBody}>
+            {!!reto.ejercicio && (
+              <View style={{ gap: 6 }}>
+                <Text style={{ color: '#1d1d1d', fontWeight: '700' }}>
+                  Ejercicio:
+                </Text>
+                <Text style={{ color: '#1d1d1d' }}>
+                  {reto.ejercicio}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -342,5 +403,41 @@ const styles = StyleSheet.create({
     right: 15,
     alignItems: 'center',
     justifyContent: 'center'
-  }
+  },
+
+  /* RETO DEL DÍA (estilo card de Temas) */
+  challengeCard: {
+    backgroundColor: "#1d1d1d",
+    borderRadius: 16,
+    overflow: 'hidden'
+  },
+  challengeHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  challengeBody: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12
+  },
+  ctaButton: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: '#1d1d1d',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  ctaText: {
+    color: '#FFFFFF',
+    fontWeight: '700'
+  },
+
 });
