@@ -1,10 +1,11 @@
 import axios from "axios";
 import { Stack } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -60,7 +61,6 @@ export default function AdminScreen() {
     [temas, selectedTemaId]
   );
 
-  // helpers
   const toast = (msg: string) => Alert.alert("Admin", msg);
 
   // cargar temas
@@ -120,7 +120,6 @@ export default function AdminScreen() {
         headers: { "x-api-key": API_KEY },
       });
       toast("Sincronización iniciada/completada.");
-      // refresca listados
       if (selectedTemaId != null) fetchVideosDeTema(selectedTemaId);
     } catch (e) {
       console.error(e);
@@ -219,7 +218,6 @@ export default function AdminScreen() {
       );
       toast("Video asignado.");
       fetchVideosDeTema(selectedTemaId);
-      // opcional: removerlo de resultados
       setResults((prev) => prev.filter((v) => v.id !== videoId));
     } catch (e) {
       console.error(e);
@@ -243,8 +241,102 @@ export default function AdminScreen() {
     }
   };
 
-  // ----- RENDER -----
-  const Header = () => (
+  // ----- UI -----
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: true, title: "Admin" }} />
+      {/* Usamos ScrollView para evitar que se desmonte el árbol con cada letra */}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="on-drag"
+      >
+        <Header
+          temas={temas}
+          loadingTemas={loadingTemas}
+          selectedTemaId={selectedTemaId}
+          setSelectedTemaId={setSelectedTemaId}
+          selectedTema={selectedTema}
+          videosTema={videosTema}
+          loadingVideosTema={loadingVideosTema}
+          q={q}
+          setQ={setQ}
+          results={results}
+          searching={searching}
+          searchError={searchError}
+          newTitle={newTitle}
+          setNewTitle={setNewTitle}
+          newDesc={newDesc}
+          setNewDesc={setNewDesc}
+          handleSync={handleSync}
+          handleCreateTema={handleCreateTema}
+          handleDeleteTema={handleDeleteTema}
+          handleSearch={handleSearch}
+          handleAssign={handleAssign}
+          handleRemove={handleRemove}
+          syncLoading={syncLoading}
+        />
+      </ScrollView>
+    </>
+  );
+}
+
+// Header memoizado para minimizar renders
+type HeaderProps = {
+  temas: Tema[];
+  loadingTemas: boolean;
+  selectedTemaId: number | null;
+  setSelectedTemaId: (id: number) => void;
+  selectedTema: Tema | null;
+  videosTema: Video[];
+  loadingVideosTema: boolean;
+  q: string;
+  setQ: (v: string) => void;
+  results: Video[];
+  searching: boolean;
+  searchError: string | null;
+  newTitle: string;
+  setNewTitle: (v: string) => void;
+  newDesc: string;
+  setNewDesc: (v: string) => void;
+  handleSync: () => void;
+  handleCreateTema: () => void;
+  handleDeleteTema: () => void;
+  handleSearch: () => void;
+  handleAssign: (id: string) => void;
+  handleRemove: (id: string) => void;
+  syncLoading: boolean;
+};
+
+const Header = memo(function Header(props: HeaderProps) {
+  const {
+    temas,
+    loadingTemas,
+    selectedTemaId,
+    setSelectedTemaId,
+    selectedTema,
+    videosTema,
+    loadingVideosTema,
+    q,
+    setQ,
+    results,
+    searching,
+    searchError,
+    newTitle,
+    setNewTitle,
+    newDesc,
+    setNewDesc,
+    handleSync,
+    handleCreateTema,
+    handleDeleteTema,
+    handleSearch,
+    handleAssign,
+    handleRemove,
+    syncLoading,
+  } = props;
+
+  return (
     <View>
       {/* Actions */}
       <Text style={styles.sectionTitle}>Acciones</Text>
@@ -306,8 +398,7 @@ export default function AdminScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              // Importante: desactivar scroll anidado vertical (no aplica por ser horizontal)
-              nestedScrollEnabled
+              // nota: no usamos removeClippedSubviews para no perder foco en inputs
             />
 
             <View style={styles.rowBetween}>
@@ -352,8 +443,7 @@ export default function AdminScreen() {
               </View>
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
-            scrollEnabled={false}                // ⛔ evita scroll interno
-            removeClippedSubviews
+            scrollEnabled={false} // el scroll grande lo maneja el ScrollView
           />
         )}
       </View>
@@ -398,28 +488,13 @@ export default function AdminScreen() {
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             style={{ marginTop: 10 }}
-            scrollEnabled={false}              // ⛔ evita scroll interno
-            removeClippedSubviews
+            scrollEnabled={false} // seguimos usando el scroll del ScrollView padre
           />
         )}
       </View>
     </View>
   );
-
-  return (
-    <>
-      <Stack.Screen options={{ headerShown: true, title: "Admin" }} />
-      {/* FlatList externo: evita ScrollView + FlatList anidados */}
-      <FlatList
-        data={[1]} // dummy
-        keyExtractor={() => "admin-root"}
-        renderItem={() => <Header />}
-        style={styles.container}
-        contentContainerStyle={styles.content}
-      />
-    </>
-  );
-}
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },

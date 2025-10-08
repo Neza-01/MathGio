@@ -1,4 +1,3 @@
-import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,6 +16,7 @@ import {
   View
 } from 'react-native';
 import retos from '../../assets/public/Retos';
+import { ThemedText } from '../../components/ThemedText';
 
 type Video = {
   id: string;
